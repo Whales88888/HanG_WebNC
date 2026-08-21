@@ -1,40 +1,64 @@
-import express, { Request, Response } from "express";
+import express from "express";
+import db from "./database";
 
 const app = express();
+const PORT = 9000;
 
-const PORT = process.env.PORT || 9000;
-
-// Cho phép server nhận JSON
 app.use(express.json());
 
-// GET /
-app.get("/", (req: Request, res: Response) => {
-    res.status(200).json({
-        success: true,
-        message: "Node.js server is running!"
+app.get("/api/test", (req, res) => {
+    res.json({
+        message: "Server is working!"
     });
 });
 
-// GET /api/get
-app.get("/api/get", (req: Request, res: Response) => {
-    res.status(200).json({
-        success: true,
-        message: "This is a GET request!"
-    });
+app.get("/api/users", async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT * FROM users");
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database error"
+        });
+    }
 });
 
-// POST /api/post
-app.post("/api/post", (req: Request, res: Response) => {
-    const data = req.body;
+// POST thêm user
+app.post("/api/users", async (req, res) => {
+    try {
+        const { name, age, class: userClass } = req.body;
 
-    res.status(200).json({
-        success: true,
-        message: "This is a POST request!",
-        data: data
-    });
+        const [result] = await db.execute(
+            "INSERT INTO users (name, age, class) VALUES (?, ?, ?)",
+            [name, age, userClass]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            data: {
+                name,
+                age,
+                class: userClass
+            }
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database error"
+        });
+    }
 });
 
-// Khởi động server
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
 });
