@@ -4,20 +4,11 @@ import db from "./database";
 const app = express();
 const PORT = 9000;
 
-// Middleware đọc dữ liệu JSON
 app.use(express.json());
 
-// GET test
-app.get("/api/test", (req, res) => {
-    res.json({
-        message: "Server is working!"
-    });
-});
-
-// GET danh sách users
-app.get("/api/users", async (req, res) => {
+app.get("/api/students", async (req, res) => {
     try {
-        const [rows] = await db.query("SELECT * FROM users");
+        const [rows] = await db.query("SELECT * FROM STUDENT");
 
         res.json({
             success: true,
@@ -33,23 +24,23 @@ app.get("/api/users", async (req, res) => {
     }
 });
 
-// POST thêm user
-app.post("/api/users", async (req, res) => {
+app.post("/api/students", async (req, res) => {
     try {
-        const { name, age, class: userClass } = req.body;
+        const { sid, sname, email, tutor_id } = req.body;
 
         await db.execute(
-            "INSERT INTO users (name, age, class) VALUES (?, ?, ?)",
-            [name, age, userClass]
+            "INSERT INTO STUDENT (SID, SNAME, EMAIL, Tutor_Id) VALUES (?, ?, ?, ?)",
+            [sid, sname, email, tutor_id]
         );
 
         res.status(201).json({
             success: true,
-            message: "User created successfully",
+            message: "Student created successfully",
             data: {
-                name,
-                age,
-                class: userClass
+                sid,
+                sname,
+                email,
+                tutor_id
             }
         });
     } catch (error) {
@@ -62,35 +53,76 @@ app.post("/api/users", async (req, res) => {
     }
 });
 
-// POST theo yêu cầu bài tập
-app.post("/api/post", (req, res) => {
+app.put("/api/students/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { sname, email, tutor_id } = req.body;
 
-    // Lấy dữ liệu từ Query Parameter
-    const id = req.query.id;
+        const [result]: any = await db.execute(
+            "UPDATE STUDENT SET SNAME = ?, EMAIL = ?, Tutor_Id = ? WHERE SID = ?",
+            [sname, email, tutor_id, id]
+        );
 
-    // Lấy dữ liệu từ Header
-    const idHeader = req.headers["idheader"];
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+        }
 
-    // Lấy dữ liệu từ Body
-    const body = req.body;
+        res.json({
+            success: true,
+            message: "Student updated successfully",
+            data: {
+                sid: id,
+                sname,
+                email,
+                tutor_id
+            }
+        });
+    } catch (error) {
+        console.error(error);
 
-    // Trả dữ liệu về Client
-    res.status(200).json({
-        message: "POST request successful",
-
-        query: {
-            id: id
-        },
-
-        header: {
-            idHeader: idHeader
-        },
-
-        body: body
-    });
+        res.status(500).json({
+            success: false,
+            message: "Database error"
+        });
+    }
 });
 
-// Khởi động Server
+app.delete("/api/students/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        const [result]: any = await db.execute(
+            "DELETE FROM STUDENT WHERE SID = ?",
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Student deleted successfully",
+            data: {
+                sid: id
+            }
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Database error"
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
 });
